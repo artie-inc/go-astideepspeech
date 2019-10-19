@@ -14,7 +14,7 @@ extern "C" {
     } Metadata;
 
     typedef void* ModelWrapper;
-    ModelWrapper* New(const char* aModelPath, int aBeamWidth);
+    ModelWrapper* New(const char* aModelPath, int aBeamWidth, int maxBatchSize, int batchTimeoutMicros, int numBatchThreads);
     void Close(ModelWrapper* w);
     void EnableDecoderWithLM(ModelWrapper* w, const char* aLMPath, const char* aTriePath, float aLMWeight, float aValidWordCountWeight);
     int GetModelSampleRate(ModelWrapper* w);

@@ -18,11 +18,21 @@ type Model struct {
 //
 // modelPath          The path to the frozen model graph.
 // beamWidth          The beam width used by the decoder. A larger beam width generates better results at the cost of decoding time.
-func New(modelPath string, beamWidth int) *Model {
+func New(modelPath string, beamWidth int, maxBatchSize, batchTimeoutMicros, numBatchThreads int) *Model {
 	return &Model{
+<<<<<<< HEAD
 		beamWidth: beamWidth,
 		modelPath: modelPath,
 		w:         C.New(C.CString(modelPath), C.int(beamWidth)),
+||||||| parent of a1e5909... added support for batching parameters on DS_CreateModel
+		beamWidth:          beamWidth,
+		modelPath:          modelPath,
+		w:                  C.New(C.CString(modelPath), C.int(beamWidth)),
+=======
+		beamWidth: beamWidth,
+		modelPath: modelPath,
+		w:         C.New(C.CString(modelPath), C.int(beamWidth), C.int(maxBatchSize), C.int(batchTimeoutMicros), C.int(numBatchThreads)),
+>>>>>>> a1e5909... added support for batching parameters on DS_CreateModel
 	}
 }
 
