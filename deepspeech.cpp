@@ -7,9 +7,9 @@ extern "C" {
             ModelState* model;
 
         public:
-            ModelWrapper(const char* aModelPath, int aBeamWidth)
+            ModelWrapper(const char* aModelPath, int aBeamWidth, int maxBatchSize, int batchTimeoutMicros, int numBatchThreads)
             {
-                DS_CreateModel(aModelPath, aBeamWidth, &model);
+                DS_CreateModel(aModelPath, aBeamWidth, maxBatchSize, batchTimeoutMicros, numBatchThreads, &model);
             }
 
             ~ModelWrapper()
@@ -43,9 +43,9 @@ extern "C" {
             }
     };
 
-    ModelWrapper* New(const char* aModelPath, int aBeamWidth)
+    ModelWrapper* New(const char* aModelPath, int aBeamWidth, int maxBatchSize, int batchTimeoutMicros, int numBatchThreads)
     {
-        return new ModelWrapper(aModelPath, aBeamWidth);
+        return new ModelWrapper(aModelPath, aBeamWidth, maxBatchSize, batchTimeoutMicros, numBatchThreads);
     }
     void Close(ModelWrapper* w)
     {
