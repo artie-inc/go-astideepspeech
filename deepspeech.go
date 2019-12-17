@@ -129,6 +129,13 @@ func (s *Stream) FeedAudioContent(buffer []int16, bufferSize uint) {
 	C.FeedAudioContent(s.sw, (*C.short)(unsafe.Pointer((*sliceHeader)(unsafe.Pointer(&buffer)).Data)), C.uint(bufferSize))
 }
 
+// FeedAudioContentFloat Feed float32 audio samples to an ongoing streaming inference.
+// aBuffer      An array of 32-bit, mono raw audio samples at the  appropriate sample rate.
+// aBufferSize  The number of samples in @p aBuffer.
+func (s *Stream) FeedAudioContentFloat(buffer []float32, bufferSize uint) {
+	C.FeedAudioContentFloat(s.sw, (*C.short)(unsafe.Pointer((*sliceHeader)(unsafe.Pointer(&buffer)).Data)), C.uint(bufferSize))
+}
+
 // IntermediateDecode Compute the intermediate decoding of an ongoing streaming inference.
 // This is an expensive process as the decoder implementation isn't
 // currently capable of streaming, so it always starts from the beginning

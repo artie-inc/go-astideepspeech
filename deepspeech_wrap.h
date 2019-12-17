@@ -25,6 +25,7 @@ extern "C" {
     StreamWrapper* CreateStream(ModelWrapper* w);
     void FreeStream(StreamWrapper* sw);
     void FeedAudioContent(StreamWrapper* sw, const short* aBuffer, unsigned int aBufferSize);
+    void FeedAudioContentFloat(StreamWrapper* sw, const float* aBuffer, unsigned int aBufferSize);
     char* IntermediateDecode(StreamWrapper* sw);
     char* FinishStream(StreamWrapper* sw);
     Metadata* FinishStreamWithMetadata(StreamWrapper* sw);
