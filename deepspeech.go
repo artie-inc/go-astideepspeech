@@ -129,12 +129,23 @@ func (s *Stream) FeedAudioContent(buffer []int16, bufferSize uint) {
 	C.FeedAudioContent(s.sw, (*C.short)(unsafe.Pointer((*sliceHeader)(unsafe.Pointer(&buffer)).Data)), C.uint(bufferSize))
 }
 
+func (s *Stream) FeedAudioContentFloat(buffer []float32, bufferSize uint) {
+	C.FeedAudioContentFloat(s.sw, (*C.float)(unsafe.Pointer((*sliceHeader)(unsafe.Pointer(&buffer)).Data)), C.uint(bufferSize))
+}
+
 // IntermediateDecode Compute the intermediate decoding of an ongoing streaming inference.
 // This is an expensive process as the decoder implementation isn't
 // currently capable of streaming, so it always starts from the beginning
 // of the audio.
 func (s *Stream) IntermediateDecode() string {
 	return C.GoString(C.IntermediateDecode(s.sw))
+}
+
+
+// IntermediateDecodeWithMetadata Compute the intermediate decoding of an ongoing streaming inference.
+func (s *Stream) IntermediateDecodeWithMetadata() *Metadata {
+	//return C.GoString(C.IntermediateDecodeWithMetadata(s.sw))
+	return (*Metadata)(unsafe.Pointer(C.IntermediateDecodeWithMetadata(s.sw)))
 }
 
 // FinishStream Signal the end of an audio signal to an ongoing streaming
