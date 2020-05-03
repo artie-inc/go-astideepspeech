@@ -18,21 +18,10 @@ type Model struct {
 //
 // modelPath          The path to the frozen model graph.
 // beamWidth          The beam width used by the decoder. A larger beam width generates better results at the cost of decoding time.
-func New(modelPath string, beamWidth int, maxBatchSize, batchTimeoutMicros, numBatchThreads int) *Model {
+func New(modelPath string, maxBatchSize, batchTimeoutMicros, numBatchThreads int) *Model {
 	return &Model{
-<<<<<<< HEAD
-		beamWidth: beamWidth,
 		modelPath: modelPath,
-		w:         C.New(C.CString(modelPath), C.int(beamWidth)),
-||||||| parent of a1e5909... added support for batching parameters on DS_CreateModel
-		beamWidth:          beamWidth,
-		modelPath:          modelPath,
-		w:                  C.New(C.CString(modelPath), C.int(beamWidth)),
-=======
-		beamWidth: beamWidth,
-		modelPath: modelPath,
-		w:         C.New(C.CString(modelPath), C.int(beamWidth), C.int(maxBatchSize), C.int(batchTimeoutMicros), C.int(numBatchThreads)),
->>>>>>> a1e5909... added support for batching parameters on DS_CreateModel
+		w:         C.New(C.CString(modelPath), C.int(maxBatchSize), C.int(batchTimeoutMicros), C.int(numBatchThreads)),
 	}
 }
 
@@ -42,19 +31,37 @@ func (m *Model) Close() error {
 	return nil
 }
 
-// EnableDecoderWithLM enables decoding using beam scoring with a KenLM language model.
+// EnableExternalScorer enables decoding using an external scorer.
 //
-// lmPath 	        The path to the language model binary file.
-// triePath 	        The path to the trie file build from the same vocabulary as the language model binary.
-// lmWeight 	        The weight to give to language model results when scoring.
-// validWordCountWeight The weight (bonus) to give to beams when adding a new valid word to the decoding.
-func (m *Model) EnableDecoderWithLM(lmPath, triePath string, lmWeight, validWordCountWeight float64) {
-	C.EnableDecoderWithLM(m.w, C.CString(lmPath), C.CString(triePath), C.float(lmWeight), C.float(validWordCountWeight))
+// scorerPath		The path to the scorer (kenlm language model) file
+func (m *Model) EnableExternalScorer(scorerPath string) {
+	C.EnableExternalScorer(m.w, C.CString(scorerPath))
+}
+
+// DisableExternalScorer disables decoding using an external scorer.
+func (m *Model) DisableExternalScorer() {
+	C.DisableExternalScorer(m.w)
+}
+
+// GetModelBeamWidth Get beam width value used by the model. If SetModelBeamWidth
+// was not called before, will return the default value loaded from the model file.
+func (m *Model) GetModelBeamWidth() uint {
+	return uint(C.GetModelBeamWidth(m.w))
+}
+
+// SetModelBeamWidth  Set beam width value used by the model.
+func (m *Model) SetModelBeamWidth(beamWidth uint) int {
+	return int(C.SetModelBeamWidth(m.w, C.uint(m.beamWidth)))
 }
 
 // GetModelSampleRate read the sample rate that was used to produce the model file.
 func (m *Model) GetModelSampleRate() int {
 	return int(C.GetModelSampleRate(m.w))
+}
+
+// SetScorerAlphaBeta Set hyperparameters alpha and beta of the external scorer.
+func (m *Model) SetScorerAlphaBeta(alpha, beta float32) int {
+	return int(C.SetScorerAlphaBeta(m.w, C.float(alpha), C.float(beta)))
 }
 
 // sliceHeader represents a slice header
@@ -74,35 +81,51 @@ func (m *Model) SpeechToText(buffer []int16, bufferSize uint) string {
 	return retval
 }
 
-type MetadataItem C.struct_MetadataItem
+type TokenMetadata C.struct_TokenMetadata
 
-func (mi *MetadataItem) Character() string {
-	return C.GoString(C.MetadataItem_GetCharacter((*C.MetadataItem)(unsafe.Pointer(mi))))
+func (tm *TokenMetadata) Text() string {
+	return C.GoString(C.TokenMetadata_GetText((*C.TokenMetadata)(unsafe.Pointer(tm))))
 }
 
-func (mi *MetadataItem) Timestep() int {
-	return int(C.MetadataItem_GetTimestep((*C.MetadataItem)(unsafe.Pointer(mi))))
+func (tm *TokenMetadata) Timestep() uint {
+	return uint(C.TokenMetadata_GetTimestep((*C.TokenMetadata)(unsafe.Pointer(tm))))
 }
 
-func (mi *MetadataItem) StartTime() float32 {
-	return float32(C.MetadataItem_GetStartTime((*C.MetadataItem)(unsafe.Pointer(mi))))
+func (tm *TokenMetadata) StartTime() float32 {
+	return float32(C.TokenMetadata_GetStartTime((*C.TokenMetadata)(unsafe.Pointer(tm))))
 }
 
-// Metadata represents a DeepSpeech metadata output
+type CandidateTranscript C.struct_CandidateTranscript
+
+func (ct *CandidateTranscript) Tokens() []TokenMetadata {
+
+	// numItems := int32(C.Metadata_GetNumItems((*C.Metadata)(unsafe.Pointer(m))))
+	// allItems := C.Metadata_GetItems((*C.Metadata)(unsafe.Pointer(m)))
+	// return (*[1 << 30]MetadataItem)(unsafe.Pointer(allItems))[:numItems:numItems]
+	numItems := int32(C.CandidateTranscript_GetNumTokens((*C.CandidateTranscript)(unsafe.Pointer(ct))))
+	allItems := C.CandidateTranscript_GetTokens((*C.CandidateTranscript)(unsafe.Pointer(ct)))
+	return (*[1 << 30]TokenMetadata)(unsafe.Pointer(allItems))[:numItems:numItems]
+	// return C.CandidateTranscript_getTokens(ct)
+}
+
+func (ct *CandidateTranscript) NumTokens() uint {
+	return uint(C.CandidateTranscript_GetNumTokens((*C.CandidateTranscript)(unsafe.Pointer(ct))))
+}
+
+func (ct *CandidateTranscript) Confidence() float64 {
+	return float64(C.CandidateTranscript_GetConfidence((*C.CandidateTranscript)(unsafe.Pointer(ct))))
+}
+
 type Metadata C.struct_Metadata
 
-func (m *Metadata) NumItems() int32 {
-	return int32(C.Metadata_GetNumItems((*C.Metadata)(unsafe.Pointer(m))))
+func (m *Metadata) NumTranscripts() int32 {
+	return int32(C.Metadata_GetNumTranscripts((*C.Metadata)(unsafe.Pointer(m))))
 }
 
-func (m *Metadata) Confidence() float64 {
-	return float64(C.Metadata_GetConfidence((*C.Metadata)(unsafe.Pointer(m))))
-}
-
-func (m *Metadata) Items() []MetadataItem {
-	numItems := int32(C.Metadata_GetNumItems((*C.Metadata)(unsafe.Pointer(m))))
-	allItems := C.Metadata_GetItems((*C.Metadata)(unsafe.Pointer(m)))
-	return (*[1 << 30]MetadataItem)(unsafe.Pointer(allItems))[:numItems:numItems]
+func (m *Metadata) Transcripts() []CandidateTranscript {
+	numItems := int32(C.Metadata_GetNumTranscripts((*C.Metadata)(unsafe.Pointer(m))))
+	allItems := C.Metadata_GetCandidateTranscripts((*C.Metadata)(unsafe.Pointer(m)))
+	return (*[1 << 30]CandidateTranscript)(unsafe.Pointer(allItems))[:numItems:numItems]
 }
 
 // Close frees the Metadata structure properly
@@ -111,11 +134,52 @@ func (m *Metadata) Close() error {
 	return nil
 }
 
+// --------------------------------------
+
+// type MetadataItem C.struct_MetadataItem
+
+// func (mi *MetadataItem) Character() string {
+// 	return C.GoString(C.MetadataItem_GetCharacter((*C.MetadataItem)(unsafe.Pointer(mi))))
+// }
+
+// func (mi *MetadataItem) Timestep() int {
+// 	return int(C.MetadataItem_GetTimestep((*C.MetadataItem)(unsafe.Pointer(mi))))
+// }
+
+// func (mi *MetadataItem) StartTime() float32 {
+// 	return float32(C.MetadataItem_GetStartTime((*C.MetadataItem)(unsafe.Pointer(mi))))
+// }
+
+// // Metadata represents a DeepSpeech metadata output
+// type Metadata C.struct_Metadata
+
+// func (m *Metadata) NumItems() int32 {
+// 	return int32(C.Metadata_GetNumItems((*C.Metadata)(unsafe.Pointer(m))))
+// }
+
+// func (m *Metadata) Confidence() float64 {
+// 	return float64(C.Metadata_GetConfidence((*C.Metadata)(unsafe.Pointer(m))))
+// }
+
+// func (m *Metadata) Items() []MetadataItem {
+// 	numItems := int32(C.Metadata_GetNumItems((*C.Metadata)(unsafe.Pointer(m))))
+// 	allItems := C.Metadata_GetItems((*C.Metadata)(unsafe.Pointer(m)))
+// 	return (*[1 << 30]MetadataItem)(unsafe.Pointer(allItems))[:numItems:numItems]
+// }
+
+// // Close frees the Metadata structure properly
+// func (m *Metadata) Close() error {
+// 	C.FreeMetadata((*C.Metadata)(unsafe.Pointer(m)))
+// 	return nil
+// }
+
+//-------------------------------------------------------
+
 // SpeechToTextWithMetadata uses the DeepSpeech model to perform Speech-To-Text.
 // buffer     A 16-bit, mono raw audio signal at the appropriate sample rate.
 // bufferSize The number of samples in the audio signal.
-func (m *Model) SpeechToTextWithMetadata(buffer []int16, bufferSize uint) *Metadata {
-	return (*Metadata)(unsafe.Pointer(C.STTWithMetadata(m.w, (*C.short)(unsafe.Pointer((*sliceHeader)(unsafe.Pointer(&buffer)).Data)), C.uint(bufferSize))))
+func (m *Model) SpeechToTextWithMetadata(buffer []int16, bufferSize uint, numResults uint) *Metadata {
+	return (*Metadata)(unsafe.Pointer(C.STTWithMetadata(m.w, (*C.short)(unsafe.Pointer((*sliceHeader)(unsafe.Pointer(&buffer)).Data)), C.uint(bufferSize), C.uint(numResults))))
 }
 
 // Stream represent a streaming state
@@ -151,11 +215,10 @@ func (s *Stream) IntermediateDecode() string {
 	return C.GoString(C.IntermediateDecode(s.sw))
 }
 
-
 // IntermediateDecodeWithMetadata Compute the intermediate decoding of an ongoing streaming inference.
-func (s *Stream) IntermediateDecodeWithMetadata() *Metadata {
+func (s *Stream) IntermediateDecodeWithMetadata(numResults uint) *Metadata {
 	//return C.GoString(C.IntermediateDecodeWithMetadata(s.sw))
-	return (*Metadata)(unsafe.Pointer(C.IntermediateDecodeWithMetadata(s.sw)))
+	return (*Metadata)(unsafe.Pointer(C.IntermediateDecodeWithMetadata(s.sw, C.uint(numResults))))
 }
 
 // FinishStream Signal the end of an audio signal to an ongoing streaming
@@ -169,8 +232,8 @@ func (s *Stream) FinishStream() string {
 
 // FinishStreamWithMetadata Signal the end of an audio signal to an ongoing streaming
 // inference, returns extended metadata.
-func (s *Stream) FinishStreamWithMetadata() *Metadata {
-	return (*Metadata)(unsafe.Pointer(C.FinishStreamWithMetadata(s.sw)))
+func (s *Stream) FinishStreamWithMetadata(numResults uint) *Metadata {
+	return (*Metadata)(unsafe.Pointer(C.FinishStreamWithMetadata(s.sw, C.uint(numResults))))
 }
 
 // DiscardStream Destroy a streaming state without decoding the computed logits.
@@ -181,6 +244,6 @@ func (s *Stream) FreeStream() {
 }
 
 // PrintVersions Print version of this library and of the linked TensorFlow library.
-func PrintVersions() {
-	C.PrintVersions()
-}
+// func PrintVersions() {
+// 	C.PrintVersions()
+// }

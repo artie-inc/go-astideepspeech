@@ -7,9 +7,9 @@ extern "C" {
             ModelState* model;
 
         public:
-            ModelWrapper(const char* aModelPath, int aBeamWidth, int maxBatchSize, int batchTimeoutMicros, int numBatchThreads)
+            ModelWrapper(const char* aModelPath, int maxBatchSize, int batchTimeoutMicros, int numBatchThreads)
             {
-                DS_CreateModel(aModelPath, aBeamWidth, maxBatchSize, batchTimeoutMicros, numBatchThreads, &model);
+                DS_CreateModel(aModelPath, maxBatchSize, batchTimeoutMicros, numBatchThreads, &model);
             }
 
             ~ModelWrapper()
@@ -17,24 +17,48 @@ extern "C" {
                 DS_FreeModel(model);
             }
 
-            void enableDecoderWithLM(const char* aLMPath, const char* aTriePath, float aLMWeight, float aValidWordCountWeight)
-            {
-                DS_EnableDecoderWithLM(model, aLMPath, aTriePath, aLMWeight, aValidWordCountWeight);
+            unsigned int getModelBeamWidth() {
+                return DS_GetModelBeamWidth(model);
             }
 
-	    int getModelSampleRate()
-	    {
-		return DS_GetModelSampleRate(model);
-	    }
+            int setModelBeamWidth(unsigned int aBeamWidth) {
+                return DS_SetModelBeamWidth(model, aBeamWidth);
+            }
+
+            // void enableDecoderWithLM(const char* aLMPath, const char* aTriePath, float aLMWeight, float aValidWordCountWeight)
+            // {
+            //     DS_EnableDecoderWithLM(model, aLMPath, aTriePath, aLMWeight, aValidWordCountWeight);
+            // }
+
+            int enableExternalScorer(const char* aScorerPath)
+            {
+                return DS_EnableExternalScorer(model, aScorerPath);
+            }
+
+            // zero on success, non-zero on failure
+            int disableExternalScorer()
+            {
+                return DS_DisableExternalScorer(model);
+            }
+
+            int setScorerAlphaBeta(float aAlpha,float aBeta)
+            {
+                return DS_SetScorerAlphaBeta(model, aAlpha, aBeta);
+            }
+
+            int getModelSampleRate()
+            {
+                return DS_GetModelSampleRate(model);
+            }
 
             char* stt(const short* aBuffer, unsigned int aBufferSize)
             {
                 return DS_SpeechToText(model, aBuffer, aBufferSize);
             }
 
-            Metadata* sttWithMetadata(const short* aBuffer, unsigned int aBufferSize)
+            Metadata* sttWithMetadata(const short* aBuffer, unsigned int aBufferSize, unsigned int aNumResults)
             {
-                return DS_SpeechToTextWithMetadata(model, aBuffer, aBufferSize);
+                return DS_SpeechToTextWithMetadata(model, aBuffer, aBufferSize, aNumResults);
             }
 
             ModelState* getModel()
@@ -43,23 +67,41 @@ extern "C" {
             }
     };
 
-    ModelWrapper* New(const char* aModelPath, int aBeamWidth, int maxBatchSize, int batchTimeoutMicros, int numBatchThreads)
+    ModelWrapper* New(const char* aModelPath, int maxBatchSize, int batchTimeoutMicros, int numBatchThreads)
     {
-        return new ModelWrapper(aModelPath, aBeamWidth, maxBatchSize, batchTimeoutMicros, numBatchThreads);
+        return new ModelWrapper(aModelPath, maxBatchSize, batchTimeoutMicros, numBatchThreads);
     }
     void Close(ModelWrapper* w)
     {
         delete w;
     }
 
-    void EnableDecoderWithLM(ModelWrapper* w, const char* aLMPath, const char* aTriePath, float aLMWeight, float aValidWordCountWeight)
+    int EnableExternalScorer(ModelWrapper* w, const char* aScorerPath)
     {
-        w->enableDecoderWithLM(aLMPath, aTriePath, aLMWeight, aValidWordCountWeight);
+        return w->enableExternalScorer(aScorerPath);
+    }
+
+    int DisableExternalScorer(ModelWrapper* w)
+    {
+        return w->disableExternalScorer();
+    }
+
+    int SetScorerAlphaBeta(ModelWrapper* w, float aAlpha, float aBeta)
+    {
+        return w->setScorerAlphaBeta(aAlpha, aBeta);
+    }
+
+    unsigned int GetModelBeamWidth(ModelWrapper* w) {
+        return w->getModelBeamWidth();
+    }
+
+    unsigned int SetModelBeamWidth(ModelWrapper* w, unsigned int aBeamWidth) {
+        return w->setModelBeamWidth(aBeamWidth);
     }
 
     int GetModelSampleRate(ModelWrapper* w)
     {
-	return w->getModelSampleRate();
+        return w->getModelSampleRate();
     }
 
     char* STT(ModelWrapper* w, const short* aBuffer, unsigned int aBufferSize)
@@ -67,39 +109,43 @@ extern "C" {
         return w->stt(aBuffer, aBufferSize);
     }
 
-    Metadata* STTWithMetadata(ModelWrapper* w, const short* aBuffer, unsigned int aBufferSize)
+    Metadata* STTWithMetadata(ModelWrapper* w, const short* aBuffer, unsigned int aBufferSize, unsigned int aNumResults)
     {
-        return w->sttWithMetadata(aBuffer, aBufferSize);
+        return w->sttWithMetadata(aBuffer, aBufferSize, aNumResults);
     }
 
-    double Metadata_GetConfidence(Metadata* m)
+    int Metadata_GetNumTranscripts(Metadata* m) 
     {
-        return m->confidence;
+        return m->num_transcripts;
     }
 
-    int Metadata_GetNumItems(Metadata* m)
+    const CandidateTranscript* Metadata_GetCandidateTranscripts(Metadata* m) 
     {
-        return m->num_items;
+        return m->transcripts;
     }
 
-    MetadataItem* Metadata_GetItems(Metadata* m)
-    {
-        return m->items;
+    const TokenMetadata* CandidateTranscript_GetTokens(CandidateTranscript* ct) {
+        return ct->tokens;
     }
 
-    char* MetadataItem_GetCharacter(MetadataItem* mi)
-    {
-        return mi->character;
+    const unsigned int  CandidateTranscript_GetNumTokens(CandidateTranscript* ct) {
+        return ct->num_tokens;
     }
 
-    int MetadataItem_GetTimestep(MetadataItem* mi)
-    {
-        return mi->timestep;
+    const double  CandidateTranscript_GetConfidence(CandidateTranscript* ct) {
+        return ct->confidence;
     }
 
-    float MetadataItem_GetStartTime(MetadataItem* mi)
-    {
-        return mi->start_time;
+    const char* TokenMetadata_GetText(TokenMetadata* tm) {
+        return tm->text;
+    }
+
+    const unsigned int TokenMetadata_GetTimestep(TokenMetadata* tm) {
+        return tm->timestep;
+    }
+
+    const float TokenMetadata_GetStartTime(TokenMetadata* tm) {
+        return tm->start_time;
     }
 
     class StreamWrapper {
@@ -132,9 +178,9 @@ extern "C" {
                 return DS_IntermediateDecode(s);
             }
 
-            Metadata* intermediateDecodeWithMetadata()
+            Metadata* intermediateDecodeWithMetadata(unsigned int aNumResults)
             {
-                return DS_IntermediateDecodeWithMetadata(s);
+                return DS_IntermediateDecodeWithMetadata(s, aNumResults);
             } 
 
             char* finishStream()
@@ -142,9 +188,9 @@ extern "C" {
                 return DS_FinishStream(s);
             }
 
-            Metadata* finishStreamWithMetadata()
+            Metadata* finishStreamWithMetadata(unsigned int aNumResults)
             {
-                return DS_FinishStreamWithMetadata(s);
+                return DS_FinishStreamWithMetadata(s, aNumResults);
             }
 
             void freeStream()
@@ -153,7 +199,7 @@ extern "C" {
             }
     };
 
-    StreamWrapper* CreateStream(ModelWrapper* mw, unsigned int aPreAllocFrames)
+    StreamWrapper* CreateStream(ModelWrapper* mw)
     {
         return new StreamWrapper(mw);
     }
@@ -177,9 +223,9 @@ extern "C" {
         return sw->intermediateDecode();
     }
 
-    Metadata* IntermediateDecodeWithMetadata(StreamWrapper *sw)
+    Metadata* IntermediateDecodeWithMetadata(StreamWrapper *sw, unsigned int aNumResults)
     {
-        return sw->intermediateDecodeWithMetadata();
+        return sw->intermediateDecodeWithMetadata(aNumResults);
     } 
 
     char* FinishStream(StreamWrapper* sw)
@@ -187,9 +233,9 @@ extern "C" {
         return sw->finishStream();
     }
 
-    Metadata* FinishStreamWithMetadata(StreamWrapper* sw)
+    Metadata* FinishStreamWithMetadata(StreamWrapper* sw, unsigned int aNumResults)
     {
-        return sw->finishStreamWithMetadata();
+        return sw->finishStreamWithMetadata(aNumResults);
     }
 
     void FreeString(char* s)
@@ -202,8 +248,8 @@ extern "C" {
         DS_FreeMetadata(m);
     }
 
-    void PrintVersions()
+    char* Version()
     {
-        DS_PrintVersions();
+        return DS_Version();
     }
 }
