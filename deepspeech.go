@@ -20,12 +20,12 @@ type Model struct {
 
 // New creates a new Model.
 // modelPath is the path to the frozen model graph.
-func New(modelPath string) (*Model, error) {
+func New(modelPath string, maxBatchSize, batchTimeoutMicros, numBatchThreads int) (*Model, error) {
 	cModelPath := C.CString(modelPath)
 	defer C.free(unsafe.Pointer(cModelPath))
 
 	var ret C.int
-	w := C.New(cModelPath, &ret) // returns nil on error
+	w := C.New(cModelPath, C.int(maxBatchSize), C.int(batchTimeoutMicros), C.int(numBatchThreads), &ret) // returns nil on error
 	if ret != 0 {
 		return nil, errorFromCode(ret)
 	}

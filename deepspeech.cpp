@@ -7,10 +7,10 @@ extern "C" {
             ModelState* model;
 
         public:
-            ModelWrapper(const char* aModelPath, int *errorOut)
+            ModelWrapper(const char* aModelPath, int maxBatchSize, int batchTimeoutMicros, int numBatchThreads, int *errorOut)
             {
                 model = nullptr;
-                *errorOut = DS_CreateModel(aModelPath, &model);
+                *errorOut = DS_CreateModel(aModelPath, maxBatchSize, batchTimeoutMicros, numBatchThreads, &model);
             }
 
             ~ModelWrapper()
@@ -67,9 +67,9 @@ extern "C" {
             }
     };
 
-    ModelWrapper* New(const char* aModelPath, int* errorOut)
+    ModelWrapper* New(const char* aModelPath, int maxBatchSize, int batchTimeoutMicros, int numBatchThreads, int* errorOut)
     {
-        auto mw = new ModelWrapper(aModelPath, errorOut);
+        auto mw = new ModelWrapper(aModelPath, maxBatchSize, batchTimeoutMicros, numBatchThreads, errorOut);
         if (*errorOut != DS_ERR_OK) {
             delete mw;
             mw = nullptr;

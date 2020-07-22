@@ -19,7 +19,7 @@ extern "C" {
     } Metadata;
 
     typedef void* ModelWrapper;
-    ModelWrapper* New(const char* aModelPath, int* errorOut);
+    ModelWrapper* New(const char* aModelPath, int maxBatchSize, int batchTimeoutMicros, int numBatchThreads, int* errorOut);
     void Model_Close(ModelWrapper* w);
     unsigned int Model_BeamWidth(ModelWrapper* w);
     int Model_SetBeamWidth(ModelWrapper* w, unsigned int aBeamWidth);
