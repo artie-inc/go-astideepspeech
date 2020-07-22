@@ -190,6 +190,11 @@ extern "C" {
                 DS_FeedAudioContent(s, aBuffer, aBufferSize);
             }
 
+            void feedAudioContentFloat(const float* aBuffer, unsigned int aBufferSize)
+            {
+                DS_FeedAudioContentFloat(s, aBuffer, aBufferSize);
+            }
+
             char* intermediateDecode()
             {
                 return DS_IntermediateDecode(s);
@@ -241,6 +246,11 @@ extern "C" {
     void Stream_FeedAudioContent(StreamWrapper* sw, const short* aBuffer, unsigned int aBufferSize)
     {
         sw->feedAudioContent(aBuffer, aBufferSize);
+    }
+
+    void Stream_FeedAudioContentFloat(StreamWrapper* sw, const float* aBuffer, unsigned int aBufferSize)
+    {
+        sw->feedAudioContentFloat(aBuffer, aBufferSize);
     }
 
     char* Stream_IntermediateDecode(StreamWrapper* sw)

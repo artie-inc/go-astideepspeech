@@ -192,6 +192,14 @@ func (s *Stream) FeedAudioContent(buffer []int16) {
 	C.Stream_FeedAudioContent(s.sw, (*C.short)(unsafe.Pointer(hdr.Data)), C.uint(hdr.Len))
 }
 
+// FeedAudioContentFloat feeds audio samples to an ongoing streaming inference.
+// buffer is an array of float32, mono raw audio samples at the appropriate sample rate
+// (matching what the model was trained on).
+func (s *Stream) FeedAudioContentFloat(buffer []float32) {
+	hdr := (*sliceHeader)(unsafe.Pointer(&buffer))
+	C.Stream_FeedAudioContentFloat(s.sw, (*C.float)(unsafe.Pointer(hdr.Data)), C.uint(hdr.Len))
+}
+
 // IntermediateDecode computes the intermediate decoding of an ongoing streaming inference.
 // This is an expensive process as the decoder implementation isn't
 // currently capable of streaming, so it always starts from the beginning

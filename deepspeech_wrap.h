@@ -34,6 +34,7 @@ extern "C" {
     StreamWrapper* Model_NewStream(ModelWrapper* w, int* errorOut);
     void Stream_Discard(StreamWrapper* sw);
     void Stream_FeedAudioContent(StreamWrapper* sw, const short* aBuffer, unsigned int aBufferSize);
+    void Stream_FeedAudioContentFloat(StreamWrapper* sw, const float* aBuffer, unsigned int aBufferSize);
     char* Stream_IntermediateDecode(StreamWrapper* sw);
     Metadata* Stream_IntermediateDecodeWithMetadata(StreamWrapper* sw, unsigned int aNumResults);
     char* Stream_Finish(StreamWrapper* sw);
